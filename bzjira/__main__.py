@@ -6,7 +6,7 @@ import getpass
 
 from jira import JIRA
 import xmltodict
-
+from requests.utils import get_netrc_auth
 from . import bugzilla
 
 
@@ -22,9 +22,12 @@ def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key):
 
     print 'Bugzilla id %s found: %s' % (bz_id, bug.short_desc)
 
-    user = raw_input("Username:")
-    passwd = getpass.getpass()
-    jira = JIRA(jira_server, basic_auth=(user, passwd))
+    if not get_netrc_auth(jira_server):
+        user = raw_input("Username:")
+        passwd = getpass.getpass()
+        jira = JIRA(jira_server, basic_auth=(user, passwd))
+    else:
+        jira = JIRA(jira_server)
 
     def create_issue(bug):
         issue = jira.create_issue(project=project_key,
