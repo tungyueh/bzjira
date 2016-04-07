@@ -67,8 +67,8 @@ def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key):
         filename = '%s-%s%s' % (root, a.attachid, ext)
         if find_attachement(filename):
             continue
-        jira.add_attachment(issue, StringIO(a.content), filename)
-        print 'File %s attached' % filename
+        aa = jira.add_attachment(issue, StringIO(a.content), filename)
+        print 'File %s (%d bytes)attached' % (filename, len(a.content))
 
     for i, c in enumerate(bug.long_desc):
         if i == 0:
@@ -94,7 +94,6 @@ def main():
     parser.add_argument('-j', metavar='', help='JIRA Server URL')
     parser.add_argument('-k', metavar='', help='JIRA Project Key')
     args = parser.parse_args()
-    print args
     sync_bz_to_jira(args.b, args.bz_id, args.j, args.k)
 
 if __name__ == '__main__':

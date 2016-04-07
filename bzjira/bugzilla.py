@@ -27,12 +27,18 @@ class BZIssue(object):
 
     @property
     def long_desc(self):
-        return [LongDesc(d) for d in self._raw['long_desc']]
+        a = self._raw['long_desc']
+        if isinstance(a, list):
+            return [LongDesc(d) for d in a]
+        else:
+            return [LongDesc(a)]
 
     @property
     def attachment(self):
-        a = self._raw['attachment']
-        if isinstance(a, list):
+        a = self._raw.get('attachment')
+        if not a:
+            return []
+        elif isinstance(a, list):
             return [Attachment(d) for d in a]
         else:
             return [Attachment(a)]
