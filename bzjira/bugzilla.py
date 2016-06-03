@@ -6,7 +6,7 @@ import base64
 def issue(bz_server, bz_id):
     resp = requests.get('%s/show_bug.cgi?ctype=xml&id=%s' % (bz_server, bz_id))
     resp.raise_for_status()
-    return BZIssue(xmltodict.parse(resp.content))
+    return DQVBZIssue(xmltodict.parse(resp.content))
 
 
 class BZIssue(object):
@@ -42,6 +42,12 @@ class BZIssue(object):
             return [Attachment(d) for d in a]
         else:
             return [Attachment(a)]
+
+
+class DQVBZIssue(BZIssue):
+    @property
+    def short_desc(self):
+        return u"[DQV#%s] %s" % (self.bug_id, self._raw['short_desc'])
 
 
 class LongDesc(object):
