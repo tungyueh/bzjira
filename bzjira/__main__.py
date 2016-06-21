@@ -8,6 +8,7 @@ from jira import JIRA
 import xmltodict
 from requests.utils import get_netrc_auth
 from . import bugzilla
+from . import mantis
 
 
 def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key):
@@ -90,14 +91,100 @@ def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key):
         print 'Comment %s created' % i
 
 
+def sync_mantis_to_jira(mantis_server, mantis_id, jira_server, project_key):
+    auth = get_netrc_auth(mantis_server)
+    if not auth:
+        username = raw_input("Username:")
+        passwd = getpass.getpass()
+    else:
+        username, passwd = auth
+
+    bug = mantis.issue(mantis_server, username, passwd, mantis_id)
+
+    print 'Mantis id %s found: %s' % (mantis_id, bug.summary)
+
+    if not get_netrc_auth(jira_server):
+        user = raw_input("Username:")
+        passwd = getpass.getpass()
+        jira = JIRA(jira_server, basic_auth=(user, passwd))
+    else:
+        jira = JIRA(jira_server)
+
+    def create_issue(bug):
+        issue = jira.create_issue(project=project_key,
+                                  summary='[Mantis#%s] ' % bug.id + bug.summary,
+                                  description=bug.description,
+                                  issuetype={'name': 'Bug'},
+                                  priority={'name': 'Critical' if bug.priority == 'P1' else 'Major'},
+                                  customfield_10216='Mantis-' + str(bug.id))
+        return issue
+
+    issues = jira.search_issues('project = %s AND "BugZilla ID" ~ "Mantis-%s"' % (project_key, mantis_id))
+    if issues:
+        issue = issues[0]
+        issue = jira.issue(issue.key)
+        print 'Corresponding Jira issue found: %s' % issues[0]
+        ans = raw_input("Update this issue? ")
+        if ans not in ['y', 'Y', 'yes']:
+            return
+    else:
+        ans = raw_input("Create a new issue? ")
+        if ans not in ['y', 'Y', 'yes']:
+            return
+        # create
+        issue = create_issue(bug)
+        print 'New Jira issue created: %s' % issue
+
+    def find_attachement(filename):
+        # TODO: use filename as key?
+        for a in issue.fields.attachment:
+            if a.filename == filename:
+                return a
+
+    def find_comment(index):
+        for c in issue.fields.comment.comments:
+            first_line = c.body.split('\n', 1)[0]
+            if first_line.endswith('c%d' % index):
+                return c
+
+    for a in bug.attachments:
+        root, ext = os.path.splitext(a.filename)
+        filename = '%s-%s%s' % (root, a.id, ext)
+        if find_attachement(filename):
+            continue
+        content = StringIO(a.content)
+        aa = jira.add_attachment(issue, content, filename)
+        print 'File %s (%d bytes)attached' % (filename, content.len)
+
+    for i, c in enumerate(bug.notes):
+        if find_comment(c.id):
+            continue
+        body = '''%s/view.php?id=%s#c%s
+
+{quote}
+*%s %s*
+
+%s
+{quote}
+        ''' % (mantis_server, mantis_id, c.id, c.who, c.when, c.text)
+        jira.add_comment(issue, body)
+        print 'Comment %s created' % i
+
+
 def main():
     parser = argparse.ArgumentParser(description='Convert Bugzilla issue to JIRA issue')
     parser.add_argument('bz_id', help='Bugzilla ID')
-    parser.add_argument('-b', metavar='', help='Bugzilla Server URL')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-b', metavar='', help='Bugzilla Server URL')
+    group.add_argument('-m', metavar='', help='Mantis Server URL')
     parser.add_argument('-j', metavar='', help='JIRA Server URL')
     parser.add_argument('-k', metavar='', help='JIRA Project Key')
     args = parser.parse_args()
-    sync_bz_to_jira(args.b, args.bz_id, args.j, args.k)
+    if args.b:
+        sync_bz_to_jira(args.b, args.bz_id, args.j, args.k)
+    elif args.m:
+        sync_mantis_to_jira(args.m, args.bz_id, args.j, args.k)
+
 
 if __name__ == '__main__':
     main() 

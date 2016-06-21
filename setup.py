@@ -6,7 +6,7 @@ setup(
     packages=find_packages(exclude=["test", "test.*"]),
 
     install_requires = [
-        'jira', 'xmltodict'
+        'jira', 'xmltodict', 'suds'
     ],
     author = "Harry Chen",
     author_email = "cjhecm@gmail.com",
