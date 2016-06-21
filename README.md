@@ -1,10 +1,12 @@
 ## Bugzilla to JIRA
 
-Convert Bugzilla issue to JIRA issue using JIRA RESTful API.
+Convert Bugzilla or Mantis issue to JIRA issue using JIRA RESTful API.
 
 ## Usage
 
 python -m bzjira -b \<Bugzilla URL\> -j \<JIRA URL\> -k \<PorjectKey\> \<Bugzilla ID\>
+
+python -m bzjira -m \<Mantis URL\> -j \<JIRA URL\> -k \<PorjectKey\> \<Bugzilla ID\>
 
 This tool is able to load the credentials from inside the ~/.netrc file, so put them there instead of input on console.
 
