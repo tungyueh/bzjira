@@ -69,9 +69,12 @@ def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key):
     for a in bug.attachment:
         root, ext = os.path.splitext(a.filename)
         filename = '%s-%s%s' % (root, a.attachid, ext)
+        if filename.encode('utf-8') != filename:
+            import urllib2
+            filename = urllib2.quote(filename.encode('utf-8'))
         if find_attachement(filename):
             continue
-        aa = jira.add_attachment(issue, StringIO(a.content), filename)
+        jira.add_attachment(issue, StringIO(a.content), filename)
         print 'File %s (%d bytes)attached' % (filename, len(a.content))
 
     for i, c in enumerate(bug.long_desc):
