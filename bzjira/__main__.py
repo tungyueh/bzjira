@@ -1,17 +1,15 @@
 import os
-import sys
 from StringIO import StringIO
 import argparse
 import getpass
 
 from jira import JIRA
-import xmltodict
 from requests.utils import get_netrc_auth
 from . import bugzilla
 from . import mantis
 
 
-def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key):
+def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key, yes_all):
     '''
     issues_in_proj = jira.search_issues('project = project_key AND "BugZilla ID" ~ "%s"' % jira_id)
     found jira_id
@@ -44,13 +42,15 @@ def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key):
         issue = issues[0]
         issue = jira.issue(issue.key)
         print 'Corresponding Jira issue found: %s' % issues[0]
-        ans = raw_input("Update this issue? ")
-        if ans not in ['y', 'Y', 'yes']:
-            return
+        if not yes_all:
+            ans = raw_input("Update this issue? ")
+            if ans not in ['y', 'Y', 'yes']:
+                return
     else:
-        ans = raw_input("Create a new issue? ")
-        if ans not in ['y', 'Y', 'yes']:
-            return
+        if not yes_all:
+            ans = raw_input("Create a new issue? ")
+            if ans not in ['y', 'Y', 'yes']:
+                return
         # create
         issue = create_issue(bug)
         print 'New Jira issue created: %s' % issue
@@ -94,7 +94,7 @@ def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key):
         print 'Comment %s created' % i
 
 
-def sync_mantis_to_jira(mantis_server, mantis_id, jira_server, project_key):
+def sync_mantis_to_jira(mantis_server, mantis_id, jira_server, project_key, yes_all):
     auth = get_netrc_auth(mantis_server)
     if not auth:
         username = raw_input("Username:")
@@ -127,13 +127,15 @@ def sync_mantis_to_jira(mantis_server, mantis_id, jira_server, project_key):
         issue = issues[0]
         issue = jira.issue(issue.key)
         print 'Corresponding Jira issue found: %s' % issues[0]
-        ans = raw_input("Update this issue? ")
-        if ans not in ['y', 'Y', 'yes']:
-            return
+        if not yes_all:
+            ans = raw_input("Update this issue? ")
+            if ans not in ['y', 'Y', 'yes']:
+                return
     else:
-        ans = raw_input("Create a new issue? ")
-        if ans not in ['y', 'Y', 'yes']:
-            return
+        if not yes_all:
+            ans = raw_input("Create a new issue? ")
+            if ans not in ['y', 'Y', 'yes']:
+                return
         # create
         issue = create_issue(bug)
         print 'New Jira issue created: %s' % issue
@@ -182,11 +184,12 @@ def main():
     group.add_argument('-m', metavar='', help='Mantis Server URL')
     parser.add_argument('-j', metavar='', help='JIRA Server URL')
     parser.add_argument('-k', metavar='', help='JIRA Project Key')
+    parser.add_argument('-y', action='store_true', default=False, help='Yes to all')
     args = parser.parse_args()
     if args.b:
-        sync_bz_to_jira(args.b, args.bz_id, args.j, args.k)
+        sync_bz_to_jira(args.b, bz_id, args.j, args.k, args.y)
     elif args.m:
-        sync_mantis_to_jira(args.m, args.bz_id, args.j, args.k)
+        sync_mantis_to_jira(args.m, args.bz_id, args.j, args.k, args.y)
 
 
 if __name__ == '__main__':
