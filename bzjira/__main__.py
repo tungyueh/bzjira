@@ -194,9 +194,14 @@ def main():
     parser.add_argument('-j', metavar='', help='JIRA Server URL')
     parser.add_argument('-k', metavar='', help='JIRA Project Key')
     parser.add_argument('-y', action='store_true', default=False, help='Yes to all')
+    parser.add_argument('-q', action='store_true', default=False, help='Query')
     args = parser.parse_args()
     if args.b:
-        sync_bz_to_jira(args.b, bz_id, args.j, args.k, args.y)
+        if args.q:
+            for bz_id in bugzilla.buglist(args.b, args.bz_id):
+                sync_bz_to_jira(args.b, bz_id, args.j, args.k, args.y)
+        else:
+            sync_bz_to_jira(args.b, args.bz_id, args.j, args.k, args.y)
     elif args.m:
         sync_mantis_to_jira(args.m, args.bz_id, args.j, args.k, args.y)
 

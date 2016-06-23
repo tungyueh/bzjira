@@ -9,6 +9,13 @@ def issue(bz_server, bz_id):
     return DQVBZIssue(xmltodict.parse(resp.content))
 
 
+def buglist(bz_server, query_string):
+    resp = requests.get('%s/buglist.cgi?ctype=rss&%s' % (bz_server, query_string))
+    resp.raise_for_status()
+    for entry in xmltodict.parse(resp.content)['feed']['entry']:
+        yield entry['id'].split('=')[-1]
+
+
 class BZIssue(object):
     def __init__(self, xmldict):
         self._raw = xmldict['bugzilla']['bug']
