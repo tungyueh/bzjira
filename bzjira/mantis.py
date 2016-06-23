@@ -58,17 +58,14 @@ class Note(object):
     @property
     def who(self):
         return self._raw.reporter.name
-        # return self._raw['who']['@name']
 
     @property
     def when(self):
         return self._raw.last_modified
-        # return self._raw['bug_when']
 
     @property
     def text(self):
         return self._raw.text
-        # return self._raw['thetext']
 
 
 class Attachment(object):

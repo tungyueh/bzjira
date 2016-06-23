@@ -176,8 +176,17 @@ def sync_mantis_to_jira(mantis_server, mantis_id, jira_server, project_key, yes_
         print 'Comment %s created' % i
 
 
+def monkey_patch():
+    import suds
+    class MyXDateTime(suds.xsd.sxbuiltin.XDateTime):
+        def translate(self, value, topython=True):
+            value = value[:-2] + ':' + value[-2:]
+            return super(MyXDateTime, self).translate(value, topython)
+    suds.xsd.sxbuiltin.Factory.tags['dateTime'] = MyXDateTime
+
+
 def main():
-    parser = argparse.ArgumentParser(description='Convert Bugzilla issue to JIRA issue')
+    parser = argparse.ArgumentParser(description='Convert Bugzilla/Mantis issue to JIRA issue')
     parser.add_argument('bz_id', help='Bugzilla ID')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-b', metavar='', help='Bugzilla Server URL')
@@ -193,4 +202,5 @@ def main():
 
 
 if __name__ == '__main__':
+    monkey_patch()
     main() 
