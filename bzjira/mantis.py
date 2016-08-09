@@ -7,8 +7,16 @@ def issue(mantis_server, username, passwd, mantis_id):
     client = Client(mantis_server + '/api/soap/mantisconnect.php?wsdl')
     resp = client.service.mc_issue_get(username, passwd, mantis_id)
     i = MantisIssue(resp, mantis_server, username, passwd)
-    # print 'xxx-summary', i.summary
     return i
+
+
+def filter_get_issues(mantis_server, username, passwd, project_id, filter_id,
+                      page_num=1, per_page=10000):
+    client = Client(mantis_server + '/api/soap/mantisconnect.php?wsdl')
+    resp = client.service.mc_filter_get_issues(username, passwd, project_id,
+                                               filter_id, page_num, per_page)
+    for i in resp:
+        yield i.id
 
 
 class MantisIssue(object):
