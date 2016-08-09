@@ -97,13 +97,7 @@ def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key, yes_all):
         print 'Comment %s created' % i
 
 
-def sync_mantis_to_jira(mantis_server, mantis_id, jira_server, project_key, yes_all):
-    auth = get_netrc_auth(mantis_server)
-    if not auth:
-        username = raw_input("Username:")
-        passwd = getpass.getpass()
-    else:
-        username, passwd = auth
+def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira_server, project_key, yes_all):
 
     bug = mantis.issue(mantis_server, username, passwd, mantis_id)
 
@@ -204,6 +198,8 @@ def main():
     parser.add_argument('-k', metavar='', help='JIRA Project Key')
     parser.add_argument('-y', action='store_true', default=False, help='Yes to all')
     parser.add_argument('-q', action='store_true', default=False, help='Query')
+    parser.add_argument('-p', metavar='', help='Mantis Project ID')
+    parser.add_argument('-f', metavar='', help='Mantis Filter ID')
     args = parser.parse_args()
     if args.b:
         if args.q:
@@ -212,7 +208,17 @@ def main():
         else:
             sync_bz_to_jira(args.b, args.bz_id, args.j, args.k, args.y)
     elif args.m:
-        sync_mantis_to_jira(args.m, args.bz_id, args.j, args.k, args.y)
+        auth = get_netrc_auth(args.m)
+        if not auth:
+            username = raw_input("Username:")
+            passwd = getpass.getpass()
+        else:
+            username, passwd = auth
+        if args.p and args.f:
+            for bz_id in mantis.filter_get_issues(args.m, username, passwd, args.p, args.f):
+                sync_mantis_to_jira(args.m, username, passwd, bz_id, args.j, args.k, args.y)
+        else:
+            sync_mantis_to_jira(args.m, username, passwd, args.bz_id, args.j, args.k, args.y)
 
 
 if __name__ == '__main__':
