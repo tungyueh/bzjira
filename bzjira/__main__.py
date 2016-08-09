@@ -161,6 +161,9 @@ def sync_mantis_to_jira(mantis_server, mantis_id, jira_server, project_key, yes_
     for a in bug.attachments:
         root, ext = os.path.splitext(a.filename)
         filename = '%s-%s%s' % (root, a.id, ext)
+        if filename.encode('utf-8') != filename:
+            import urllib2
+            filename = urllib2.quote(filename.encode('utf-8'))
         if find_attachement(filename):
             continue
         content = StringIO(a.content)
