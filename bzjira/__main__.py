@@ -130,6 +130,9 @@ def sync_mantis_to_jira(mantis_server, mantis_id, jira_server, project_key, yes_
         issue = issues[0]
         issue = jira.issue(issue.key)
         print 'Corresponding Jira issue found: %s' % issues[0]
+        if str(issue.fields.status) == 'Closed':
+           print 'Skip due to issue closed.'
+           return
         if not yes_all:
             ans = raw_input("Update this issue? ")
             if ans not in ['y', 'Y', 'yes']:
