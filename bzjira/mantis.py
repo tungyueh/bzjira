@@ -45,6 +45,10 @@ class MantisIssue(object):
 
 
     @property
+    def status(self):
+        return self._raw.status.name
+
+    @property
     def notes(self):
         a = self._raw.notes
         return [Note(d) for d in a]

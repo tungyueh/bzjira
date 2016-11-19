@@ -33,6 +33,10 @@ class BZIssue(object):
         return self._raw['short_desc']
 
     @property
+    def status(self):
+        return self._raw['bug_status']
+
+    @property
     def long_desc(self):
         a = self._raw['long_desc']
         if isinstance(a, list):
