@@ -9,7 +9,7 @@ from . import bugzilla
 from . import mantis
 
 
-def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key, yes_all):
+def sync_bz_to_jira(bz_server, bz_id, jira, project_key, yes_all):
     '''
     issues_in_proj = jira.search_issues('project = project_key AND "BugZilla ID" ~ "%s"' % jira_id)
     found jira_id
@@ -20,13 +20,6 @@ def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key, yes_all):
     bug = bugzilla.issue(bz_server, bz_id)
 
     print 'Bugzilla id %s found: %s' % (bz_id, bug.short_desc)
-
-    if not get_netrc_auth(jira_server):
-        user = raw_input("Username:")
-        passwd = getpass.getpass()
-        jira = JIRA(jira_server, basic_auth=(user, passwd))
-    else:
-        jira = JIRA(jira_server)
 
     def create_issue(bug):
         issue = jira.create_issue(project=project_key,
@@ -96,19 +89,17 @@ def sync_bz_to_jira(bz_server, bz_id, jira_server, project_key, yes_all):
         jira.add_comment(issue, body)
         print 'Comment %s created' % i
 
+    if (bug.status in ['RESOLVED', 'VERIFIED'] and 
+        str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
+        jira.transition_issue(issue, 'Resolve Issue', 
+        comment='Change to Resolved due to Bugzilla #%s is %s' % (bz_id, bug.status))
 
-def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira_server, project_key, yes_all):
+
+def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, project_key, yes_all):
 
     bug = mantis.issue(mantis_server, username, passwd, mantis_id)
 
     print 'Mantis id %s found: %s' % (mantis_id, bug.summary)
-
-    if not get_netrc_auth(jira_server):
-        user = raw_input("Username:")
-        passwd = getpass.getpass()
-        jira = JIRA(jira_server, basic_auth=(user, passwd))
-    else:
-        jira = JIRA(jira_server)
 
     def create_issue(bug):
         issue = jira.create_issue(project=project_key,
@@ -178,6 +169,10 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira_server,
         jira.add_comment(issue, body)
         print 'Comment %s created' % i
 
+    if (bug.status in ['resolved', 'closed'] and
+        str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
+        jira.transition_issue(issue, 'Resolve Issue', 
+        comment='Change to Resolved due to Mantis #%s is %s' % (mantis_id, bug.status))
 
 def monkey_patch():
     import suds
@@ -198,15 +193,35 @@ def main():
     parser.add_argument('-k', metavar='', help='JIRA Project Key')
     parser.add_argument('-y', action='store_true', default=False, help='Yes to all')
     parser.add_argument('-q', action='store_true', default=False, help='Query')
+    parser.add_argument('-r', action='store_true', default=False, help='Revert')
     parser.add_argument('-p', metavar='', help='Mantis Project ID')
     parser.add_argument('-f', metavar='', help='Mantis Filter ID')
     args = parser.parse_args()
-    if args.b:
-        if args.q:
-            for bz_id in bugzilla.buglist(args.b, args.bz_id):
-                sync_bz_to_jira(args.b, bz_id, args.j, args.k, args.y)
-        else:
-            sync_bz_to_jira(args.b, args.bz_id, args.j, args.k, args.y)
+
+
+    jira_server = args.j
+    if not get_netrc_auth(jira_server):
+        user = raw_input("Username:")
+        passwd = getpass.getpass()
+        jira = JIRA(jira_server, basic_auth=(user, passwd))
+    else:
+        jira = JIRA(jira_server)
+
+    if args.b:  # bugzilla
+        if args.q:  # query
+            bz_id_list = bugzilla.buglist(args.b, args.bz_id)
+            for bz_id in bz_id_list:
+                sync_bz_to_jira(args.b, bz_id, jira, args.k, args.y)
+        elif args.r:  # find jira 
+            issues = jira.search_issues('project = %s AND "BugZilla ID" is not empty '
+            'AND status not in ("Resolved", "Closed", "Remind")' % (args.k))
+            for issue in issues:
+                bz_id = issue.fields.customfield_10216
+                if bz_id.startswith('Mantis-'):
+                    continue
+                sync_bz_to_jira(args.b, bz_id, jira, args.k, args.y)
+        else:  # single bz id
+            sync_bz_to_jira(args.b, args.bz_id, jira, args.k, args.y)
     elif args.m:
         auth = get_netrc_auth(args.m)
         if not auth:
@@ -216,9 +231,20 @@ def main():
             username, passwd = auth
         if args.p and args.f:
             for bz_id in mantis.filter_get_issues(args.m, username, passwd, args.p, args.f):
-                sync_mantis_to_jira(args.m, username, passwd, bz_id, args.j, args.k, args.y)
+                sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.y)
+        elif args.r:  # find jira 
+            issues = jira.search_issues('project = %s AND "BugZilla ID" is not empty '
+            'AND status not in ("Resolved", "Closed", "Remind")' % (args.k))
+            for issue in issues:
+                bz_id = issue.fields.customfield_10216
+                print bz_id
+                if not bz_id.startswith('Mantis-'):
+                    continue
+                bz_id = bz_id.lstrip('Mantis-')
+                print bz_id
+                sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.y)
         else:
-            sync_mantis_to_jira(args.m, username, passwd, args.bz_id, args.j, args.k, args.y)
+            sync_mantis_to_jira(args.m, username, passwd, args.bz_id, jira, args.k, args.y)
 
 
 if __name__ == '__main__':
