@@ -9,7 +9,7 @@ from . import bugzilla
 from . import mantis
 
 
-def sync_bz_to_jira(bz_server, bz_id, jira, project_key, yes_all):
+def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
     '''
     issues_in_proj = jira.search_issues('project = project_key AND "BugZilla ID" ~ "%s"' % jira_id)
     found jira_id
@@ -17,7 +17,8 @@ def sync_bz_to_jira(bz_server, bz_id, jira, project_key, yes_all):
     create attachment if not exists, (use <desc>-<attachid> as filename)
     create comment if not exists
     '''
-    bug = bugzilla.issue(bz_server, bz_id)
+    bug = bz.issue(bz_id)
+    bz_server = bz.bz_server
 
     print 'Bugzilla id %s found: %s' % (bz_id, bug.short_desc)
 
@@ -201,17 +202,28 @@ def main():
 
     jira_server = args.j
     if not get_netrc_auth(jira_server):
-        user = raw_input("Username:")
+        user = raw_input("Jira Username:")
         passwd = getpass.getpass()
         jira = JIRA(jira_server, basic_auth=(user, passwd))
     else:
         jira = JIRA(jira_server)
 
+    bz_server = args.b
+
     if args.b:  # bugzilla
+        bz_server = args.b
+        bz = bugzilla.Bugzilla(bz_server)
+        auth = get_netrc_auth(bz_server)
+        if not auth:
+            bz_username = raw_input("Bugzilla Username:")
+            bz_passwd = getpass.getpass()
+        else:
+            bz_username, bz_passwd = auth
+        bz.login(bz_username, bz_passwd)
         if args.q:  # query
-            bz_id_list = bugzilla.buglist(args.b, args.bz_id)
+            bz_id_list = bz.buglist(args.bz_id)
             for bz_id in bz_id_list:
-                sync_bz_to_jira(args.b, bz_id, jira, args.k, args.y)
+                sync_bz_to_jira(bz, bz_id, jira, args.k, args.y)
         elif args.r:  # find jira 
             issues = jira.search_issues('project = %s AND "BugZilla ID" is not empty '
             'AND status not in ("Resolved", "Closed", "Remind")' % (args.k))
@@ -219,9 +231,9 @@ def main():
                 bz_id = issue.fields.customfield_10216
                 if bz_id.startswith('Mantis-'):
                     continue
-                sync_bz_to_jira(args.b, bz_id, jira, args.k, args.y)
+                sync_bz_to_jira(bz, bz_id, jira, args.k, args.y)
         else:  # single bz id
-            sync_bz_to_jira(args.b, args.bz_id, jira, args.k, args.y)
+            sync_bz_to_jira(bz, args.bz_id, jira, args.k, args.y)
     elif args.m:
         auth = get_netrc_auth(args.m)
         if not auth:
