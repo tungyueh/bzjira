@@ -11,6 +11,16 @@ class Bugzilla(object):
         a = requests.adapters.HTTPAdapter(max_retries=15)
         self.session.mount(bz_server, a)
 
+    def _get(self, *args, **kwargs):
+        retry_num = 10
+        while retry_num > 0:
+            retry_num -= 1
+            try:
+                return self.session.get(*args, **kwargs)
+            except (requests.exceptions.ChunkedEncodingError):
+                if retry_num <= 0:
+                    raise
+
     def login(self, username, passwd):
         resp = self.session.post('%s/index.cgi' % (self.bz_server), 
             data={
@@ -21,15 +31,15 @@ class Bugzilla(object):
         self._cookie_jar = resp.cookies 
         
     def issue(self, bz_id):
-        resp = self.session.get('%s/show_bug.cgi?ctype=xml&id=%s' % (self.bz_server, bz_id),
-                                cookies=self._cookie_jar)
+        resp = self._get('%s/show_bug.cgi?ctype=xml&id=%s' % (self.bz_server, bz_id),
+                         cookies=self._cookie_jar)
         resp.raise_for_status()
         return DQVBZIssue(xmltodict.parse(resp.content))
 
 
     def buglist(self, query_string):
-        resp = self.session.get('%s/buglist.cgi?ctype=rss&%s' % (self.bz_server, query_string),
-                                cookies=self._cookie_jar)
+        resp = self._get('%s/buglist.cgi?ctype=rss&%s' % (self.bz_server, query_string),
+                         cookies=self._cookie_jar)
         resp.raise_for_status()
         for entry in xmltodict.parse(resp.content)['feed']['entry']:
             yield entry['id'].split('=')[-1]
