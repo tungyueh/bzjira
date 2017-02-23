@@ -7,9 +7,12 @@ class Bugzilla(object):
     def __init__(self, bz_server):
         self.bz_server = bz_server
         self._cookie_jar = None
+        self.session = requests.Session()
+        a = requests.adapters.HTTPAdapter(max_retries=15)
+        self.session.mount(bz_server, a)
 
     def login(self, username, passwd):
-        resp = requests.post('%s/index.cgi' % (self.bz_server), 
+        resp = self.session.post('%s/index.cgi' % (self.bz_server), 
             data={
                 'Bugzilla_login': username,
                 'Bugzilla_password': passwd
@@ -18,15 +21,15 @@ class Bugzilla(object):
         self._cookie_jar = resp.cookies 
         
     def issue(self, bz_id):
-        resp = requests.get('%s/show_bug.cgi?ctype=xml&id=%s' % (self.bz_server, bz_id),
-                            cookies=self._cookie_jar)
+        resp = self.session.get('%s/show_bug.cgi?ctype=xml&id=%s' % (self.bz_server, bz_id),
+                                cookies=self._cookie_jar)
         resp.raise_for_status()
         return DQVBZIssue(xmltodict.parse(resp.content))
 
 
     def buglist(self, query_string):
-        resp = requests.get('%s/buglist.cgi?ctype=rss&%s' % (self.bz_server, query_string),
-                            cookies=self._cookie_jar)
+        resp = self.session.get('%s/buglist.cgi?ctype=rss&%s' % (self.bz_server, query_string),
+                                cookies=self._cookie_jar)
         resp.raise_for_status()
         for entry in xmltodict.parse(resp.content)['feed']['entry']:
             yield entry['id'].split('=')[-1]
