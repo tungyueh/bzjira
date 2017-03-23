@@ -152,7 +152,11 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
             filename = urllib2.quote(filename.encode('utf-8'))
         if find_attachement(filename):
             continue
-        content = StringIO(a.content)
+        try:
+            content = StringIO(a.content)
+        except:
+            print '[ERROR] get attachment %s failed' % a
+            continue
         aa = jira.add_attachment(issue, content, filename)
         print 'File %s (%d bytes)attached' % (filename, content.len)
 
