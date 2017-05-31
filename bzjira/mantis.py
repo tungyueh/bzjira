@@ -1,7 +1,8 @@
 import base64
 
 from suds.client import Client
-
+from suds.bindings.binding import Binding
+Binding.replyfilter = (lambda s,r: r.replace('\x08', ''))
 
 def issue(mantis_server, username, passwd, mantis_id):
     client = Client(mantis_server + '/api/soap/mantisconnect.php?wsdl')
