@@ -92,7 +92,16 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
 
     if (bug.status in ['RESOLVED', 'VERIFIED'] and 
         str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
+        resolution_map = {
+            'FIXED': 'Fixed',
+            'INVALID': 'Invalid',
+            'WONTFIX': "Won't Fix",
+            'LATER': 'Remind',
+            'DUPLICATE': 'Duplicate',
+            'WORKSFORME': 'Cannot Reproduce'
+        }
         jira.transition_issue(issue, 'Resolve Issue', 
+        resolution={'name': resolution_map[bug.resolution]},
         comment='Change to Resolved due to Bugzilla #%s is %s' % (bz_id, bug.status))
 
 

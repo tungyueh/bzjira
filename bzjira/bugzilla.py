@@ -66,6 +66,10 @@ class BZIssue(object):
         return self._raw['bug_status']
 
     @property
+    def resolution(self):
+        return self._raw['resolution']
+
+    @property
     def long_desc(self):
         a = self._raw['long_desc']
         if isinstance(a, list):
