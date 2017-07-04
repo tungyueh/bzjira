@@ -51,6 +51,9 @@ class MantisIssue(object):
 
     @property
     def notes(self):
+        # not every issue has comments(notes)
+        if not hasattr(self._raw, 'notes'):
+            return []
         a = self._raw.notes
         return [Note(d) for d in a]
 
