@@ -99,7 +99,7 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
             'LATER': 'Remind',
             'DUPLICATE': 'Duplicate',
             'WORKSFORME': 'Cannot Reproduce',
-            'SpecChanged’: ‘Spec Changed’
+	    'SpecChanged': 'Spec Changed'
         }
         jira.transition_issue(issue, 'Resolve Issue', 
         resolution={'name': resolution_map[bug.resolution]},
