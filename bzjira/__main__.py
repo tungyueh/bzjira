@@ -2,6 +2,7 @@ import os
 from StringIO import StringIO
 import argparse
 import getpass
+from functools import partial
 
 from jira import JIRA
 from requests.utils import get_netrc_auth
@@ -221,6 +222,7 @@ def main():
         jira = JIRA(jira_server, basic_auth=(user, passwd))
     else:
         jira = JIRA(jira_server)
+    jira.search_issues = partial(jira.search_issues, maxResults=1000)
 
     bz_server = args.b
 
