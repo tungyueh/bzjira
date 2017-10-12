@@ -263,11 +263,9 @@ def main():
             'AND status not in ("Resolved", "Closed", "Remind")' % (args.k))
             for issue in issues:
                 bz_id = issue.fields.customfield_10216
-                print bz_id
                 if not bz_id.startswith('Mantis-'):
                     continue
                 bz_id = bz_id.lstrip('Mantis-')
-                print bz_id
                 sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.y)
         else:
             sync_mantis_to_jira(args.m, username, passwd, args.bz_id, jira, args.k, args.y)
