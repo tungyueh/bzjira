@@ -65,6 +65,10 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
                 return c
 
     for a in bug.attachment:
+        if not a.filename:
+            print 'skip attachment %s due to its name %s' % (a.attachid,
+                                                             a.filename)
+            continue
         root, ext = os.path.splitext(a.filename)
         filename = '%s-%s%s' % (root, a.attachid, ext)
         if filename.encode('utf-8') != filename:
