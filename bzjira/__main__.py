@@ -111,7 +111,7 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
         comment='Change to Resolved due to Bugzilla #%s is %s' % (bz_id, bug.status))
 
 
-def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, project_key, yes_all):
+def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, project_key, board_id, yes_all):
 
     bug = mantis.issue(mantis_server, username, passwd, mantis_id)
 
@@ -159,6 +159,17 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
             if first_line.endswith('c%d' % index):
                 return c
 
+    def move_to_current_sprint(board_id, issue):
+        for sprint in jira.sprints(board_id):
+            if sprint.state == 'ACTIVE':
+                cur_srpint = sprint
+                break
+        else:
+            print '[WARN] cannot find active sprint on board %s for moving' % board_id
+            return
+        jira.add_issues_to_sprint(sprint.id, [issue.key])
+        print 'Move issue %s to sprint %s' % (issue.key, sprint.name)
+
     for a in bug.attachments:
         root, ext = os.path.splitext(a.filename)
         filename = '%s-%s%s' % (root, a.id, ext)
@@ -188,11 +199,14 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
         ''' % (mantis_server, mantis_id, c.id, c.who, c.when, c.text)
         jira.add_comment(issue, body)
         print 'Comment %s created' % i
+        if board_id:
+            move_to_current_sprint(board_id, issue)
 
     if (bug.status in ['resolved', 'closed'] and
         str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
         jira.transition_issue(issue, 'Resolve Issue', 
         comment='Change to Resolved due to Mantis #%s is %s' % (mantis_id, bug.status))
+
 
 def monkey_patch():
     import suds
@@ -211,6 +225,7 @@ def main():
     group.add_argument('-m', metavar='', help='Mantis Server URL')
     parser.add_argument('-j', metavar='', help='JIRA Server URL')
     parser.add_argument('-k', metavar='', help='JIRA Project Key')
+    parser.add_argument('-o', metavar='', help='JIRA Board ID for moving commented issue to current sprint')
     parser.add_argument('-y', action='store_true', default=False, help='Yes to all')
     parser.add_argument('-q', action='store_true', default=False, help='Query')
     parser.add_argument('-r', action='store_true', default=False, help='Revert')
@@ -263,7 +278,7 @@ def main():
             username, passwd = auth
         if args.p and args.f:
             for bz_id in mantis.filter_get_issues(args.m, username, passwd, args.p, args.f):
-                sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.y)
+                sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.o, args.y)
         elif args.r:  # find jira 
             issues = jira.search_issues('project = %s AND "BugZilla ID" is not empty '
             'AND status not in ("Resolved", "Closed", "Remind", "Verified")' % (args.k))
@@ -272,9 +287,9 @@ def main():
                 if not bz_id.startswith('Mantis-'):
                     continue
                 bz_id = bz_id.lstrip('Mantis-')
-                sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.y)
+                sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.o, args.y)
         else:
-            sync_mantis_to_jira(args.m, username, passwd, args.bz_id, jira, args.k, args.y)
+            sync_mantis_to_jira(args.m, username, passwd, args.bz_id, jira, args.k, args.o, args.y)
 
 
 if __name__ == '__main__':
