@@ -73,7 +73,10 @@ class Note(object):
 
     @property
     def who(self):
-        return self._raw.reporter.name
+        if hasattr(self._raw.reporter, 'name'):
+            return self._raw.reporter.name
+        else:
+             return 'NoName(%s)' % self._raw.reporter.id
 
     @property
     def when(self):
