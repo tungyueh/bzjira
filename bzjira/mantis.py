@@ -42,7 +42,8 @@ class MantisIssue(object):
 
     @property
     def description(self):
-        return self._raw.description
+        return '\n'.join([self._raw.description,
+                          self._raw.additional_information])
 
 
     @property
