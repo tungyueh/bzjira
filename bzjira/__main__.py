@@ -76,8 +76,17 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
             filename = urllib2.quote(filename.encode('utf-8'))
         if find_attachement(filename):
             continue
-        jira.add_attachment(issue, StringIO(a.content), filename)
-        print 'File %s (%d bytes)attached' % (filename, len(a.content))
+        if len(a.content) < 10 * 1024 * 1024:
+            jira.add_attachment(issue, StringIO(a.content), filename)
+            print 'File %s (%d bytes)attached' % (filename, len(a.content))
+        else:
+            if find_attachment_comment(a.attachid):
+                continue
+            downlaod_url = bz.url + 'attachment.cgi?id=' + str(a.attachid)
+            comment = '{}\nbig attachment {}'.format(downlaod_url,
+                                                     a.attachid)
+            jira.add_comment(issue, comment)
+            print 'Comment for file over 10MB:' + comment
 
     for i, c in enumerate(bug.long_desc):
         if i == 0:
@@ -153,6 +162,12 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
             if a.filename == filename:
                 return a
 
+    def find_attachment_comment(attach_id):
+        for c in issue.fields.comment.comments:
+            first_line = c.body.split('\n', 1)[0]
+            if first_line.endswith('=%s' % attach_id):
+                return c
+
     def find_comment(index):
         for c in issue.fields.comment.comments:
             first_line = c.body.split('\n', 1)[0]
@@ -183,8 +198,19 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
         except:
             print '[ERROR] get attachment %s failed' % a
             continue
-        aa = jira.add_attachment(issue, content, filename)
-        print 'File %s (%d bytes)attached' % (filename, content.len)
+        if content.len < 10 * 1024 *1024:
+            aa = jira.add_attachment(issue, content, filename)
+            print 'File %s (%d bytes)attached' % (filename, content.len)
+        else:
+            if find_attachment_comment(a.id):
+                continue
+            downlaod_url = (mantis_server +
+                            '/file_download.php?&type=bug&file_id=' +
+                            str(a.id))
+            comment = '{}\nbig attachment {}'.format(downlaod_url,
+                                                     a.filename)
+            jira.add_comment(issue, comment)
+            print 'Comment for file over 10MB:' + comment
 
     for i, c in enumerate(bug.notes):
         if find_comment(c.id):
