@@ -42,8 +42,11 @@ class MantisIssue(object):
 
     @property
     def description(self):
-        return '\n'.join([self._raw.description,
-                          self._raw.additional_information])
+        if hasattr(self._raw, 'additional_informatiod'):
+            return '\n'.join([self._raw.description,
+                              self._raw.additional_information])
+        else:
+            return self._raw.description
 
 
     @property
