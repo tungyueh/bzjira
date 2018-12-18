@@ -87,8 +87,16 @@ class RESTBugzilla(object):
     def issue(self, bz_id):
         bz_id = str(bz_id)
         # get bug body
-        raw = self._get_bug(bz_id)
-        bug = raw['bugs'][0]
+        try:
+            raw = self._get_bug(bz_id)
+            bug = raw['bugs'][0]
+        except requests.exceptions.HTTPError as exp:
+            if exp.response.status_code != 404:
+                raise
+            # NOTE: Due to we have two bugzilla and for compatible reason they
+            # the new bugzilla's start from 200000. so id not found may happen.
+            # just ignore them until we have a better solution
+            return None
 
         # and merge comments
         raw = self._get_comments(bz_id)
