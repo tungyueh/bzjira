@@ -1,5 +1,5 @@
 import os
-from StringIO import StringIO
+from io import BytesIO
 import argparse
 import getpass
 from functools import partial
@@ -21,7 +21,7 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
     bug = bz.issue(bz_id)
     bz_server = bz.bz_server
 
-    print 'Bugzilla id %s found: %s' % (bz_id, bug.short_desc)
+    print('Bugzilla id %s found: %s' % (bz_id, bug.short_desc))
 
     def create_issue(bug):
         issue = jira.create_issue(project=project_key,
@@ -36,22 +36,22 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
     if issues:
         issue = issues[0]
         issue = jira.issue(issue.key)
-        print 'Corresponding Jira issue found: %s' % issues[0]
+        print('Corresponding Jira issue found: %s' % issues[0])
         if str(issue.fields.status) == 'Closed':
-           print 'Skip due to issue closed.'
+           print('Skip due to issue closed.')
            return
         if not yes_all:
-            ans = raw_input("Update this issue? ")
+            ans = input("Update this issue? ")
             if ans not in ['y', 'Y', 'yes']:
                 return
     else:
         if not yes_all:
-            ans = raw_input("Create a new issue? ")
+            ans = input("Create a new issue? ")
             if ans not in ['y', 'Y', 'yes']:
                 return
         # create
         issue = create_issue(bug)
-        print 'New Jira issue created: %s' % issue
+        print('New Jira issue created: %s' % issue)
 
     def find_attachement(filename):
         for a in issue.fields.attachment:
@@ -66,19 +66,19 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
 
     for a in bug.attachment:
         if not a.filename:
-            print 'skip attachment %s due to its name %s' % (a.attachid,
-                                                             a.filename)
+            print('skip attachment %s due to its name %s' % (a.attachid,
+                                                             a.filename))
             continue
         root, ext = os.path.splitext(a.filename)
         filename = '%s-%s%s' % (root, a.attachid, ext)
         if filename.encode('utf-8') != filename:
-            import urllib2
-            filename = urllib2.quote(filename.encode('utf-8'))
+            import urllib.request, urllib.error, urllib.parse
+            filename = urllib.parse.quote(filename.encode('utf-8'))
         if find_attachement(filename):
             continue
         if len(a.content) < 10 * 1024 * 1024:
-            jira.add_attachment(issue, StringIO(a.content), filename)
-            print 'File %s (%d bytes)attached' % (filename, len(a.content))
+            jira.add_attachment(issue, BytesIO(a.content), filename)
+            print('File %s (%d bytes)attached' % (filename, len(a.content)))
         else:
             if find_attachment_comment(a.attachid):
                 continue
@@ -86,7 +86,7 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
             comment = '{}\nbig attachment {}'.format(downlaod_url,
                                                      a.attachid)
             jira.add_comment(issue, comment)
-            print 'Comment for file over 10MB:' + comment
+            print('Comment for file over 10MB:' + comment)
 
     for i, c in enumerate(bug.long_desc):
         if i == 0:
@@ -102,9 +102,9 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
 {quote}
         ''' % (bz_server, bz_id, i, c.who, c.bug_when, c.thetext)
         jira.add_comment(issue, body)
-        print 'Comment %s created' % i
+        print('Comment %s created' % i)
 
-    if (bug.status in ['RESOLVED', 'VERIFIED'] and 
+    if (bug.status in ['RESOLVED', 'VERIFIED'] and
         str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
         resolution_map = {
             'FIXED': 'Fixed',
@@ -115,7 +115,7 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
             'WORKSFORME': 'Cannot Reproduce',
             'SpecChanged': 'Spec Changed'
         }
-        jira.transition_issue(issue, 'Resolve Issue', 
+        jira.transition_issue(issue, 'Resolve Issue',
         resolution={'name': resolution_map[bug.resolution]},
         comment='Change to Resolved due to Bugzilla #%s is %s' % (bz_id, bug.status))
 
@@ -124,7 +124,7 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
 
     bug = mantis.issue(mantis_server, username, passwd, mantis_id)
 
-    print 'Mantis id %s found: %s' % (mantis_id, bug.summary)
+    print('Mantis id %s found: %s' % (mantis_id, bug.summary))
 
     def create_issue(bug):
         issue = jira.create_issue(project=project_key,
@@ -139,22 +139,22 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
     if issues:
         issue = issues[0]
         issue = jira.issue(issue.key)
-        print 'Corresponding Jira issue found: %s' % issues[0]
+        print('Corresponding Jira issue found: %s' % issues[0])
         if str(issue.fields.status) == 'Closed':
-           print 'Skip due to issue closed.'
+           print('Skip due to issue closed.')
            return
         if not yes_all:
-            ans = raw_input("Update this issue? ")
+            ans = input("Update this issue? ")
             if ans not in ['y', 'Y', 'yes']:
                 return
     else:
         if not yes_all:
-            ans = raw_input("Create a new issue? ")
+            ans = input("Create a new issue? ")
             if ans not in ['y', 'Y', 'yes']:
                 return
         # create
         issue = create_issue(bug)
-        print 'New Jira issue created: %s' % issue
+        print('New Jira issue created: %s' % issue)
 
     def find_attachement(filename):
         # TODO: use filename as key?
@@ -180,27 +180,27 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
                 cur_srpint = sprint
                 break
         else:
-            print '[WARN] cannot find active sprint on board %s for moving' % board_id
+            print('[WARN] cannot find active sprint on board %s for moving' % board_id)
             return
         jira.add_issues_to_sprint(sprint.id, [issue.key])
-        print 'Move issue %s to sprint %s' % (issue.key, sprint.name)
+        print('Move issue %s to sprint %s' % (issue.key, sprint.name))
 
     for a in bug.attachments:
         root, ext = os.path.splitext(a.filename)
         filename = '%s-%s%s' % (root, a.id, ext)
         if filename.encode('utf-8') != filename:
-            import urllib2
-            filename = urllib2.quote(filename.encode('utf-8'))
+            import urllib.request, urllib.error, urllib.parse
+            filename = urllib.parse.quote(filename.encode('utf-8'))
         if find_attachement(filename):
             continue
         try:
-            content = StringIO(a.content)
+            content = BytesIO(a.content)
         except:
-            print '[ERROR] get attachment %s failed' % a
+            print('[ERROR] get attachment %s failed' % a)
             continue
         if content.len < 10 * 1024 *1024:
             aa = jira.add_attachment(issue, content, filename)
-            print 'File %s (%d bytes)attached' % (filename, content.len)
+            print('File %s (%d bytes)attached' % (filename, content.len))
         else:
             if find_attachment_comment(a.id):
                 continue
@@ -210,7 +210,7 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
             comment = '{}\nbig attachment {}'.format(downlaod_url,
                                                      a.filename)
             jira.add_comment(issue, comment)
-            print 'Comment for file over 10MB:' + comment
+            print('Comment for file over 10MB:' + comment)
 
     for i, c in enumerate(bug.notes):
         if find_comment(c.id):
@@ -224,13 +224,13 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
 {quote}
         ''' % (mantis_server, mantis_id, c.id, c.who, c.when, c.text)
         jira.add_comment(issue, body)
-        print 'Comment %s created' % i
+        print('Comment %s created' % i)
         if board_id:
             move_to_current_sprint(board_id, issue)
 
     if (bug.status in ['resolved', 'closed'] and
         str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
-        jira.transition_issue(issue, 'Resolve Issue', 
+        jira.transition_issue(issue, 'Resolve Issue',
         comment='Change to Resolved due to Mantis #%s is %s' % (mantis_id, bug.status))
 
 
@@ -262,7 +262,7 @@ def main():
 
     jira_server = args.j
     if not get_netrc_auth(jira_server):
-        user = raw_input("Jira Username:")
+        user = input("Jira Username:")
         passwd = getpass.getpass()
         jira = JIRA(jira_server, basic_auth=(user, passwd))
     else:
@@ -276,7 +276,7 @@ def main():
         bz = bugzilla.Bugzilla(bz_server)
         auth = get_netrc_auth(bz_server)
         if not auth:
-            bz_username = raw_input("Bugzilla Username:")
+            bz_username = input("Bugzilla Username:")
             bz_passwd = getpass.getpass()
         else:
             bz_username, bz_passwd = auth
@@ -285,7 +285,7 @@ def main():
             bz_id_list = bz.buglist(args.bz_id)
             for bz_id in bz_id_list:
                 sync_bz_to_jira(bz, bz_id, jira, args.k, args.y)
-        elif args.r:  # find jira 
+        elif args.r:  # find jira
             issues = jira.search_issues('project = %s AND "BugZilla ID" is not empty '
             'AND status not in ("Resolved", "Closed", "Remind", "Verified")' % (args.k))
             for issue in issues:
@@ -298,14 +298,14 @@ def main():
     elif args.m:
         auth = get_netrc_auth(args.m)
         if not auth:
-            username = raw_input("Username:")
+            username = input("Username:")
             passwd = getpass.getpass()
         else:
             username, passwd = auth
         if args.p and args.f:
             for bz_id in mantis.filter_get_issues(args.m, username, passwd, args.p, args.f):
                 sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.o, args.y)
-        elif args.r:  # find jira 
+        elif args.r:  # find jira
             issues = jira.search_issues('project = %s AND "BugZilla ID" is not empty '
             'AND status not in ("Resolved", "Closed", "Remind", "Verified")' % (args.k))
             for issue in issues:
@@ -320,4 +320,4 @@ def main():
 
 if __name__ == '__main__':
     monkey_patch()
-    main() 
+    main()
