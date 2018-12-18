@@ -3,7 +3,7 @@ import xmltodict
 import base64
 
 
-class Bugzilla(object):
+class CGIBugzilla(object):
     def __init__(self, bz_server):
         self.bz_server = bz_server
         self._cookie_jar = None
@@ -22,24 +22,26 @@ class Bugzilla(object):
                     raise
 
     def login(self, username, passwd):
-        resp = self.session.post('%s/index.cgi' % (self.bz_server), 
+        resp = self.session.post(
+            '%s/index.cgi' % (self.bz_server),
             data={
                 'Bugzilla_login': username,
                 'Bugzilla_password': passwd
             }
         )
-        self._cookie_jar = resp.cookies 
-        
+        self._cookie_jar = resp.cookies
+
     def issue(self, bz_id):
-        resp = self._get('%s/show_bug.cgi?ctype=xml&id=%s' % (self.bz_server, bz_id),
-                         cookies=self._cookie_jar)
+        resp = self._get(
+            '%s/show_bug.cgi?ctype=xml&id=%s' % (self.bz_server, bz_id),
+            cookies=self._cookie_jar)
         resp.raise_for_status()
         return DQVBZIssue(xmltodict.parse(resp.content))
 
-
     def buglist(self, query_string):
-        resp = self._get('%s/buglist.cgi?ctype=rss&%s' % (self.bz_server, query_string),
-                         cookies=self._cookie_jar)
+        resp = self._get(
+            '%s/buglist.cgi?ctype=rss&%s' % (self.bz_server, query_string),
+            cookies=self._cookie_jar)
         resp.raise_for_status()
         for entry in xmltodict.parse(resp.content)['feed']['entry']:
             yield entry['id'].split('=')[-1]
@@ -91,7 +93,7 @@ class BZIssue(object):
 class DQVBZIssue(BZIssue):
     @property
     def short_desc(self):
-        return u"[DQV#%s] %s" % (self.bug_id, self._raw['short_desc'])
+        return "[DQV#%s] %s" % (self.bug_id, self._raw['short_desc'])
 
 
 class LongDesc(object):
