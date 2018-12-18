@@ -18,7 +18,7 @@ class Bugzilla(object):
             resp.raise_for_status()
             print('Bugzilla %s' % resp.json())
             return True
-        except:
+        except Exception:
             print('Legacy bugzilla')
             return False
 
