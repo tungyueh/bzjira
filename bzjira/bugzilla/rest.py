@@ -38,6 +38,11 @@ class RESTBugzilla(object):
                 'token': self.token,
             }
         )
+        if resp.status_code == 404:
+            # NOTE: Due to we have two bugzilla and for compatible reason they
+            # the new bugzilla's start from 200000. so id not found may happen.
+            # just ignore them until we have a better solution
+            return None
         resp.raise_for_status()
         return resp.json()
 
@@ -88,6 +93,8 @@ class RESTBugzilla(object):
         bz_id = str(bz_id)
         # get bug body
         raw = self._get_bug(bz_id)
+        if not raw:
+            return None
         bug = raw['bugs'][0]
 
         # and merge comments
