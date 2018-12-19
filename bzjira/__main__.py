@@ -19,8 +19,6 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
     create comment if not exists
     '''
     bug = bz.issue(bz_id)
-    if not bug:
-        return
     bz_server = bz.bz_server
 
     print('Bugzilla id %s found: %s' % (bz_id, bug.short_desc))

@@ -36,13 +36,7 @@ class CGIBugzilla(object):
             '%s/show_bug.cgi?ctype=xml&id=%s' % (self.bz_server, bz_id),
             cookies=self._cookie_jar)
         resp.raise_for_status()
-        content = xmltodict.parse(resp.content)
-        if content['bugzilla']['bug'].get('@error') == 'NotFound':
-            # NOTE: Due to we have two bugzilla and for compatible reason they
-            # the new bugzilla's start from 200000. so id not found may happen.
-            # just ignore them until we have a better solution
-            return None
-        return DQVBZIssue(content)
+        return DQVBZIssue(xmltodict.parse(resp.content))
 
     def buglist(self, query_string):
         resp = self._get(
