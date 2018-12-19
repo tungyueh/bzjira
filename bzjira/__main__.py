@@ -200,9 +200,10 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
         except:
             print('[ERROR] get attachment %s failed' % a)
             continue
-        if content.len < 10 * 1024 *1024:
+        content_len = content.getbuffer().nbytes
+        if content_len < 10 * 1024 *1024:
             aa = jira.add_attachment(issue, content, filename)
-            print('File %s (%d bytes)attached' % (filename, content.len))
+            print('File %s (%d bytes)attached' % (filename, content_len))
         else:
             if find_attachment_comment(a.id):
                 continue
