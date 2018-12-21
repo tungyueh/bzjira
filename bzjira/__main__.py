@@ -71,11 +71,19 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
             print('skip attachment %s due to its name %s' % (a.attachid,
                                                              a.filename))
             continue
+
+        def quote_filename(filename):
+            if filename.encode('utf-8') != filename:
+                import urllib.request, urllib.error, urllib.parse
+                filename = urllib.parse.quote(filename.encode('utf-8'))
+            return filename
+
         root, ext = os.path.splitext(a.filename)
-        filename = '%s-%s%s' % (root, a.attachid, ext)
-        if filename.encode('utf-8') != filename:
-            import urllib.request, urllib.error, urllib.parse
-            filename = urllib.parse.quote(filename.encode('utf-8'))
+        filename = quote_filename('%s-%s%s' % (root, a.attachid, ext))
+        if len(filename) >= 255:
+            filename = quote_filename('%s%s' % (a.attachid, ext))
+            print('Filename too long , use attach id as alternative %s' % filename)
+
         if find_attachement(filename):
             continue
         if len(a.content) < 10 * 1024 * 1024:
