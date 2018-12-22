@@ -72,14 +72,12 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
                                                              a.filename))
             continue
 
-        def quote_filename(filename):
-            if filename.encode('utf-8') != filename:
-                import urllib.request, urllib.error, urllib.parse
-                filename = urllib.parse.quote(filename.encode('utf-8'))
-            return filename
-
         root, ext = os.path.splitext(a.filename)
-        filename = quote_filename('%s-%s%s' % (root, a.attachid, ext))
+        filename = '%s-%s%s' % (root, a.attachid, ext)
+        if filename.encode('utf-8') != filename:
+            import urllib.request, urllib.error, urllib.parse
+            filename = urllib.parse.quote(filename.encode('utf-8'))
+
         if len(filename) >= 255:
             ext_len = len(ext)
             filename = filename[:255-ext_len] + ext
