@@ -81,8 +81,9 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
         root, ext = os.path.splitext(a.filename)
         filename = quote_filename('%s-%s%s' % (root, a.attachid, ext))
         if len(filename) >= 255:
-            filename = quote_filename('%s%s' % (a.attachid, ext))
-            print('Filename too long , use attach id as alternative %s' % filename)
+            ext_len = len(ext)
+            filename = filename[:255-ext_len] + ext
+            print('Filename too long, truncate to 255')
 
         if find_attachement(filename):
             continue
