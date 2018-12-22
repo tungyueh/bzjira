@@ -71,11 +71,18 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
             print('skip attachment %s due to its name %s' % (a.attachid,
                                                              a.filename))
             continue
+
         root, ext = os.path.splitext(a.filename)
         filename = '%s-%s%s' % (root, a.attachid, ext)
         if filename.encode('utf-8') != filename:
             import urllib.request, urllib.error, urllib.parse
             filename = urllib.parse.quote(filename.encode('utf-8'))
+
+        if len(filename) >= 255:
+            ext_len = len(ext)
+            filename = filename[:255-ext_len] + ext
+            print('Filename too long, truncate to 255')
+
         if find_attachement(filename):
             continue
         if len(a.content) < 10 * 1024 * 1024:
