@@ -10,6 +10,96 @@ from . import bugzilla
 from . import mantis
 
 
+def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes_all):
+    bz_id = bug.key
+    if bug.fields.issuetype.name != 'Bug':
+        print(f'New JIRA key {bz_id} skipped since type is not bug')
+        return
+    print('New JIRA key %s found: %s' % (bz_id, bug.fields.summary))
+    comments = new_jira.comments(bug)
+    attachments = bug.fields.attachment
+
+    def create_issue(bug):
+        issue = jira.create_issue(
+            project=project_key,
+            summary='[{}]{}'.format(bz_id, bug.fields.summary),
+            description=bug.fields.description,
+            issuetype={'name': 'Bug'},
+            priority={'name': 'Critical' if bug.fields.priority.name == 'P1' else 'Major'},
+            customfield_10216=bz_id
+        )
+        return issue
+
+    issues = jira.search_issues('project = %s AND "BugZilla ID" ~ "%s"' % (project_key, bz_id))
+    if issues:
+        issue = issues[0]
+        issue = jira.issue(issue.key)
+        print('Corresponding Jira issue found: %s' % issues[0])
+        if str(issue.fields.status) == 'Closed':
+           print('Skip due to issue closed.')
+           return
+        if not yes_all:
+            ans = input("Update this issue? ")
+            if ans not in ['y', 'Y', 'yes']:
+                return
+    else:
+        if not yes_all:
+            ans = input("Create a new issue? ")
+            if ans not in ['y', 'Y', 'yes']:
+                return
+        issue = create_issue(bug)
+        print('New Jira issue created: %s' % issue)
+
+    def find_attachement(filename):
+        for a in issue.fields.attachment:
+            if a.filename == filename:
+                return a
+
+    for a in attachments:
+        root, ext = os.path.splitext(a.filename)
+        filename = '{}-{}{}'.format(root, a.id, ext)
+        if find_attachement(filename):
+            continue
+        import urllib.request, urllib.error, urllib.parse
+        filename = urllib.parse.quote(filename.encode('utf-8'))
+        jira.add_attachment(issue, BytesIO(a.get()), filename)
+        print('File %s (%d bytes)attached' % (filename, a.size))
+
+    def find_comment(comment_id):
+        for c in issue.fields.comment.comments:
+            first_line = c.body.split('\n', 1)[0]
+            if first_line.endswith('#comment-%s' % comment_id):
+                return c
+
+    for c in comments:
+        comment_id = c.id
+        if find_comment(comment_id):
+            continue
+        body = '''%s/browse/%s?focusedCommentId=%s#comment-%s
+
+{quote}
+*%s %s*
+
+%s
+{quote}
+        ''' % (new_jira_server, bz_id, comment_id, comment_id, c.author.displayName, c.created, c.body)
+        jira.add_comment(issue, body)
+        print('Comment %s created' % comment_id)
+
+    bug_status = bug.fields.status.name.upper()
+    # build_number = 0
+    # try:
+    #     build_number = int(bug.fields.customfield_11807)
+    # except (ValueError, TypeError) as e:
+    #     build_number = 0
+    if (bug_status in ['RESOLVED', 'CLOSE', 'DONE', 'CLOSED'] and
+        str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
+        jira.transition_issue(issue, 'Resolve Issue',
+            resolution={'name': 'Fixed'},
+            # fields={'customfield_10204': build_number},
+            comment='Change to Resolved due to New JIRA #%s is %s' % (bz_id, bug_status))
+
+
 def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
     '''
     issues_in_proj = jira.search_issues('project = project_key AND "BugZilla ID" ~ "%s"' % jira_id)
@@ -259,6 +349,7 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-b', metavar='', help='Bugzilla Server URL')
     group.add_argument('-m', metavar='', help='Mantis Server URL')
+    group.add_argument('-nj', metavar='', help='New Jira Server URL')
     parser.add_argument('-j', metavar='', help='JIRA Server URL')
     parser.add_argument('-k', metavar='', help='JIRA Project Key')
     parser.add_argument('-o', metavar='', help='JIRA Board ID for moving commented issue to current sprint')
@@ -326,7 +417,24 @@ def main():
                 sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.o, args.y)
         else:
             sync_mantis_to_jira(args.m, username, passwd, args.bz_id, jira, args.k, args.o, args.y)
-
+    elif args.nj:
+        new_jira_server = args.nj
+        if not get_netrc_auth(new_jira_server):
+            user = input("New Jira Username:")
+            passwd = getpass.getpass()
+            new_jira = JIRA(new_jira_server, basic_auth=(user, passwd))
+        else:
+            new_jira = JIRA(new_jira_server)
+        if args.q:  # query
+            buglist = new_jira.search_issues(args.bz_id, startAt=0, maxResults=200, fields='key')
+            for bug_entry in buglist:
+                bug = new_jira.issue(bug_entry.key)
+                sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, args.k, args.y)
+        elif args.r:  # find jira
+            print("not implemented")
+        else:  # single jira id
+            bug = new_jira.issue(args.bz_id)
+            sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, args.k, args.y)
 
 if __name__ == '__main__':
     monkey_patch()
