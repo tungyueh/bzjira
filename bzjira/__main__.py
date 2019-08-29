@@ -58,10 +58,10 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
     for a in attachments:
         root, ext = os.path.splitext(a.filename)
         filename = '{}-{}{}'.format(root, a.id, ext)
-        if find_attachement(filename):
-            continue
         import urllib.request, urllib.error, urllib.parse
         filename = urllib.parse.quote(filename.encode('utf-8'))
+        if find_attachement(filename):
+            continue
         jira.add_attachment(issue, BytesIO(a.get()), filename)
         print('File %s (%d bytes)attached' % (filename, a.size))
 
@@ -92,7 +92,7 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
     #     build_number = int(bug.fields.customfield_11807)
     # except (ValueError, TypeError) as e:
     #     build_number = 0
-    if (bug_status in ['RESOLVED', 'CLOSE', 'DONE', 'CLOSED'] and
+    if (bug_status in ['VERIFIED', 'CLOSE', 'DONE', 'CLOSED'] and
         str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
         jira.transition_issue(issue, 'Resolve Issue',
             resolution={'name': 'Fixed'},
@@ -393,6 +393,8 @@ def main():
                 bz_id = issue.fields.customfield_10216
                 if bz_id.startswith('Mantis-'):
                     continue
+                if bz_id.startswith('QTSHBS'):
+                    continue
                 sync_bz_to_jira(bz, bz_id, jira, args.k, args.y)
         else:  # single bz id
             sync_bz_to_jira(bz, args.bz_id, jira, args.k, args.y)
@@ -426,7 +428,7 @@ def main():
         else:
             new_jira = JIRA(new_jira_server)
         if args.q:  # query
-            buglist = new_jira.search_issues(args.bz_id, startAt=0, maxResults=200, fields='key')
+            buglist = new_jira.search_issues(args.bz_id, startAt=0, maxResults=200)
             for bug_entry in buglist:
                 bug = new_jira.issue(bug_entry.key)
                 sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, args.k, args.y)

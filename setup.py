@@ -6,7 +6,7 @@ setup(
     packages=find_packages(exclude=["test", "test.*"]),
 
     install_requires = [
-        'jira==1.0.7', 'xmltodict', 'suds-jurko'
+        'jira==2.0.0', 'xmltodict', 'suds-jurko'
     ],
     author = "Harry Chen",
     author_email = "cjhecm@gmail.com",
