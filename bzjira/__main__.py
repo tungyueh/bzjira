@@ -399,6 +399,10 @@ def main():
                     continue
                 if bz_id.startswith('QTSHBS'):
                     continue
+                try:
+                    int(bz_id)
+                except ValueError:
+                    continue
                 sync_bz_to_jira(bz, bz_id, jira, args.k, args.y)
         else:  # single bz id
             sync_bz_to_jira(bz, args.bz_id, jira, args.k, args.y)
