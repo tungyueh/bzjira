@@ -441,7 +441,16 @@ def main():
                 bug = new_jira.issue(bug_entry.key)
                 sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, args.k, args.y)
         elif args.r:  # find jira
-            print("not implemented")
+            issues = jira.search_issues(
+                'project = %s AND "BugZilla ID" is not empty '
+                'AND status not in ("Resolved", "Closed", "Remind", "Verified")' % (
+                    args.k))
+            for issue in issues:
+                bz_id = issue.fields.customfield_10216
+                if not bz_id.startswith('QTSHBS00'):
+                    continue
+                bug = new_jira.issue(bz_id)
+                sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, args.k, args.y)
         else:  # single jira id
             bug = new_jira.issue(args.bz_id)
             sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, args.k, args.y)
