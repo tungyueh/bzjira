@@ -42,11 +42,18 @@ class MantisIssue(object):
 
     @property
     def description(self):
+        description = self._raw.description
+
+        additional_information = ''
         if hasattr(self._raw, 'additional_information'):
-            return '\n'.join([self._raw.description,
-                              self._raw.additional_information])
-        else:
-            return self._raw.description
+            additional_information = self._raw.additional_information
+
+        steps_to_reproduce = ''
+        if hasattr(self._raw, 'steps_to_reproduce'):
+            steps_to_reproduce = self._raw.steps_to_reproduce
+
+        return '\n'.join([description, additional_information, steps_to_reproduce])
+
 
 
     @property
