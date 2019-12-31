@@ -66,8 +66,12 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
             print('Filename too long, truncate to 255')
         if find_attachement(filename):
             continue
-        jira.add_attachment(issue, BytesIO(a.get()), filename)
-        print('File %s (%d bytes)attached' % (filename, a.size))
+
+        if a.size > 10*1024*1024:
+            print('Skip too big attachment %s (%d bytes)' % (filename, a.size))
+        else:
+            jira.add_attachment(issue, BytesIO(a.get()), filename)
+            print('File %s (%d bytes)attached' % (filename, a.size))
 
     def find_comment(comment_id):
         for c in issue.fields.comment.comments:
