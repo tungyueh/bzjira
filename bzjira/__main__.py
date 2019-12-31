@@ -52,7 +52,7 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
         issue = create_issue(bug)
         print('New Jira issue created: %s' % issue)
 
-    def find_attachement(filename):
+    def find_attachment(filename):
         for a in issue.fields.attachment:
             if a.filename == filename:
                 return a
@@ -66,7 +66,7 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
             ext_len = len(ext)
             filename = filename[:255-ext_len] + ext
             print('Filename too long, truncate to 255')
-        if find_attachement(filename):
+        if find_attachment(filename):
             continue
 
         if a.size > MAX_OLD_JIRA_ATTACHMENT_BYTES:
@@ -155,7 +155,7 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
         issue = create_issue(bug)
         print('New Jira issue created: %s' % issue)
 
-    def find_attachement(filename):
+    def find_attachment(filename):
         for a in issue.fields.attachment:
             if a.filename == filename:
                 return a
@@ -183,7 +183,7 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
             filename = filename[:255-ext_len] + ext
             print('Filename too long, truncate to 255')
 
-        if find_attachement(filename):
+        if find_attachment(filename):
             continue
         if len(a.content) < MAX_OLD_JIRA_ATTACHMENT_BYTES:
             jira.add_attachment(issue, BytesIO(a.content), filename)
@@ -265,7 +265,7 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
         issue = create_issue(bug)
         print('New Jira issue created: %s' % issue)
 
-    def find_attachement(filename):
+    def find_attachment(filename):
         # TODO: use filename as key?
         for a in issue.fields.attachment:
             if a.filename == filename:
@@ -300,7 +300,7 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
         if filename.encode('utf-8') != filename:
             import urllib.request, urllib.error, urllib.parse
             filename = urllib.parse.quote(filename.encode('utf-8'))
-        if find_attachement(filename):
+        if find_attachment(filename):
             continue
         try:
             content = BytesIO(a.content)
