@@ -9,6 +9,8 @@ from requests.utils import get_netrc_auth
 from . import bugzilla
 from . import mantis
 
+MAX_OLD_JIRA_ATTACHMENT_BYTES = 10 * 1024 * 1024
+
 
 def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes_all):
     bz_id = bug.key
@@ -50,10 +52,16 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
         issue = create_issue(bug)
         print('New Jira issue created: %s' % issue)
 
-    def find_attachement(filename):
+    def find_attachment(filename):
         for a in issue.fields.attachment:
             if a.filename == filename:
                 return a
+
+    def find_attachment_comment(attach_id):
+        for c in issue.fields.comment.comments:
+            first_line = c.body.split('\n', 1)[0]
+            if attach_id in first_line:
+                return c
 
     for a in attachments:
         root, ext = os.path.splitext(a.filename)
@@ -64,11 +72,17 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
             ext_len = len(ext)
             filename = filename[:255-ext_len] + ext
             print('Filename too long, truncate to 255')
-        if find_attachement(filename):
+        if find_attachment(filename):
             continue
 
-        if a.size > 10*1024*1024:
-            print('Skip too big attachment %s (%d bytes)' % (filename, a.size))
+        if a.size > MAX_OLD_JIRA_ATTACHMENT_BYTES:
+            if find_attachment_comment(a.id):
+                continue
+            downlaod_url = '%s/secure/attachment/%s/%s' % (new_jira_server, a.id, filename)
+            comment = '{}\nbig attachment {}'.format(downlaod_url,
+                                                     a.filename)
+            jira.add_comment(issue, comment)
+            print('Comment for file over 10MB:' + comment)
         else:
             jira.add_attachment(issue, BytesIO(a.get()), filename)
             print('File %s (%d bytes)attached' % (filename, a.size))
@@ -153,7 +167,7 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
         issue = create_issue(bug)
         print('New Jira issue created: %s' % issue)
 
-    def find_attachement(filename):
+    def find_attachment(filename):
         for a in issue.fields.attachment:
             if a.filename == filename:
                 return a
@@ -181,9 +195,9 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
             filename = filename[:255-ext_len] + ext
             print('Filename too long, truncate to 255')
 
-        if find_attachement(filename):
+        if find_attachment(filename):
             continue
-        if len(a.content) < 10 * 1024 * 1024:
+        if len(a.content) < MAX_OLD_JIRA_ATTACHMENT_BYTES:
             jira.add_attachment(issue, BytesIO(a.content), filename)
             print('File %s (%d bytes)attached' % (filename, len(a.content)))
         else:
@@ -263,7 +277,7 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
         issue = create_issue(bug)
         print('New Jira issue created: %s' % issue)
 
-    def find_attachement(filename):
+    def find_attachment(filename):
         # TODO: use filename as key?
         for a in issue.fields.attachment:
             if a.filename == filename:
@@ -298,7 +312,7 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
         if filename.encode('utf-8') != filename:
             import urllib.request, urllib.error, urllib.parse
             filename = urllib.parse.quote(filename.encode('utf-8'))
-        if find_attachement(filename):
+        if find_attachment(filename):
             continue
         try:
             content = BytesIO(a.content)
@@ -306,7 +320,7 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
             print('[ERROR] get attachment %s failed' % a)
             continue
         content_len = content.getbuffer().nbytes
-        if content_len < 10 * 1024 *1024:
+        if content_len < MAX_OLD_JIRA_ATTACHMENT_BYTES:
             aa = jira.add_attachment(issue, content, filename)
             print('File %s (%d bytes)attached' % (filename, content_len))
         else:
