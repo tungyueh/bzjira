@@ -57,6 +57,12 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
             if a.filename == filename:
                 return a
 
+    def find_attachment_comment(attach_id):
+        for c in issue.fields.comment.comments:
+            first_line = c.body.split('\n', 1)[0]
+            if attach_id in first_line:
+                return c
+
     for a in attachments:
         root, ext = os.path.splitext(a.filename)
         filename = '{}-{}{}'.format(root, a.id, ext)
@@ -70,7 +76,13 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
             continue
 
         if a.size > MAX_OLD_JIRA_ATTACHMENT_BYTES:
-            print('Skip too big attachment %s (%d bytes)' % (filename, a.size))
+            if find_attachment_comment(a.id):
+                continue
+            downlaod_url = f'{new_jira_server}/secure/attachment/{a.id}/{filename}'
+            comment = '{}\nbig attachment {}'.format(downlaod_url,
+                                                     a.filename)
+            jira.add_comment(issue, comment)
+            print('Comment for file over 10MB:' + comment)
         else:
             jira.add_attachment(issue, BytesIO(a.get()), filename)
             print('File %s (%d bytes)attached' % (filename, a.size))
