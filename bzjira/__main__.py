@@ -78,7 +78,7 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
         if a.size > MAX_OLD_JIRA_ATTACHMENT_BYTES:
             if find_attachment_comment(a.id):
                 continue
-            downlaod_url = f'{new_jira_server}/secure/attachment/{a.id}/{filename}'
+            downlaod_url = '%s/secure/attachment/%s/%s' % (new_jira_server, a.id, filename)
             comment = '{}\nbig attachment {}'.format(downlaod_url,
                                                      a.filename)
             jira.add_comment(issue, comment)
