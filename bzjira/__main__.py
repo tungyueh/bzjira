@@ -9,6 +9,8 @@ from requests.utils import get_netrc_auth
 from . import bugzilla
 from . import mantis
 
+MAX_OLD_JIRA_ATTACHMENT_BYTES = 10 * 1024 * 1024
+
 
 def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes_all):
     bz_id = bug.key
@@ -67,7 +69,7 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
         if find_attachement(filename):
             continue
 
-        if a.size > 10*1024*1024:
+        if a.size > MAX_OLD_JIRA_ATTACHMENT_BYTES:
             print('Skip too big attachment %s (%d bytes)' % (filename, a.size))
         else:
             jira.add_attachment(issue, BytesIO(a.get()), filename)
@@ -183,7 +185,7 @@ def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
 
         if find_attachement(filename):
             continue
-        if len(a.content) < 10 * 1024 * 1024:
+        if len(a.content) < MAX_OLD_JIRA_ATTACHMENT_BYTES:
             jira.add_attachment(issue, BytesIO(a.content), filename)
             print('File %s (%d bytes)attached' % (filename, len(a.content)))
         else:
@@ -306,7 +308,7 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
             print('[ERROR] get attachment %s failed' % a)
             continue
         content_len = content.getbuffer().nbytes
-        if content_len < 10 * 1024 *1024:
+        if content_len < MAX_OLD_JIRA_ATTACHMENT_BYTES:
             aa = jira.add_attachment(issue, content, filename)
             print('File %s (%d bytes)attached' % (filename, content_len))
         else:
