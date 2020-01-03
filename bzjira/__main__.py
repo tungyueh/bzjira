@@ -24,7 +24,7 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
     def create_issue(bug):
         issue = jira.create_issue(
             project=project_key,
-            summary='[{}]{}'.format(bz_id, bug.fields.summary),
+            summary='[{}]{}'.format(bz_id.replace('-','#'), bug.fields.summary),
             description=bug.fields.description,
             issuetype={'name': 'Bug'},
             priority={'name': 'Critical' if bug.fields.priority.name == 'P1' else 'Major'},
