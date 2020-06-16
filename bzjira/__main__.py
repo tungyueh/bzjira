@@ -308,10 +308,12 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
 
     for a in bug.attachments:
         root, ext = os.path.splitext(a.filename)
-        filename = '%s-%s%s' % (root, a.id, ext)
-        if filename.encode('utf-8') != filename:
+        if root.encode('utf-8') != root:
             import urllib.request, urllib.error, urllib.parse
-            filename = urllib.parse.quote(filename.encode('utf-8'))
+            root = urllib.parse.quote(root.encode('utf-8'))
+        if len(root) + len(str(a.id)) + len(ext) > 255:
+            root = root[:255-len(str(a.id))-len(ext)-1]
+        filename = '%s-%s%s' % (root, a.id, ext)
         if find_attachment(filename):
             continue
         try:
