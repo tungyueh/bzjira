@@ -314,7 +314,6 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
         if len(root) + len(str(a.id)) + len(ext) > 255:
             root = root[:255-len(str(a.id))-len(ext)-1]
         filename = '%s-%s%s' % (root, a.id, ext)
-        print(f'{filename}, {len(filename)}')
         if find_attachment(filename):
             continue
         try:
