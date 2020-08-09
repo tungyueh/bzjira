@@ -109,17 +109,17 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
         print('Comment %s created' % comment_id)
 
     bug_status = bug.fields.status.name.upper()
-    # build_number = 0
-    # try:
-    #     build_number = int(bug.fields.customfield_11807)
-    # except (ValueError, TypeError) as e:
-    #     build_number = 0
-    if (bug_status in ['VERIFIED', 'CLOSE', 'DONE', 'CLOSED'] and
-        str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
-        jira.transition_issue(issue, 'Resolve Issue',
-            resolution={'name': 'Fixed'},
-            # fields={'customfield_10204': build_number},
-            comment='Change to Resolved due to New JIRA #%s is %s' % (bz_id, bug_status))
+    if bug_status in ['VERIFIED', 'CLOSE', 'DONE', 'CLOSED']:
+        if issue.fields.status.name == 'Open':
+            jira.transition_issue(issue, 'Assign to')
+        elif issue.fields.status.name == 'Assigned':
+            jira.transition_issue(issue, 'Resolved',
+                customfield_12044='NA', # build path
+                fixVersions=[{'name':'NA'}],
+                customfield_13443={'value':'---'}, # resolved reason
+                customfield_12014='NA', # root cause
+                customfield_11707='NA', # solution 
+                comment='Change to Resolved due to JIRA #%s is %s' % (bz_id, bug.status))
 
 
 def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
@@ -352,10 +352,17 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
         if board_id:
             move_to_current_sprint(board_id, issue)
 
-    if (bug.status in ['resolved', 'closed'] and
-        str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
-        jira.transition_issue(issue, 'Resolve Issue',
-        comment='Change to Resolved due to Mantis #%s is %s' % (mantis_id, bug.status))
+    if bug.status in ['resolved', 'closed']:
+        if issue.fields.status.name == 'Open':
+            jira.transition_issue(issue, 'Assign to')
+        elif issue.fields.status.name == 'Assigned':
+            jira.transition_issue(issue, 'Resolved',
+                customfield_12044='NA', # build path
+                fixVersions=[{'name':'NA'}],
+                customfield_13443={'value':'---'}, # resolved reason
+                customfield_12014='NA', # root cause
+                customfield_11707='NA', # solution 
+                comment='Change to Resolved due to Mantis #%s is %s' % (mantis_id, bug.status))
 
 
 def monkey_patch():
