@@ -27,12 +27,12 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
             summary='[{}]{}'.format(bz_id.replace('-','#'), bug.fields.summary),
             description=bug.fields.description,
             issuetype={'name': 'Bug'},
-            priority={'name': 'Critical' if bug.fields.priority.name == 'P1' else 'Major'},
-            customfield_10216=bz_id
+            priority={'name': bug.fields.priority.name},
+            customfield_14100=bz_id
         )
         return issue
 
-    issues = jira.search_issues('project = %s AND "BugZilla ID" ~ "%s"' % (project_key, bz_id))
+    issues = jira.search_issues('project = %s AND "Mantis ID" ~ "%s"' % (project_key, bz_id))
     if issues:
         issue = issues[0]
         issue = jira.issue(issue.key)
@@ -252,11 +252,11 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
                                   summary='[Mantis#%s] ' % bug.id + bug.summary,
                                   description=bug.description,
                                   issuetype={'name': 'Bug'},
-                                  priority={'name': 'Critical' if bug.priority == 'P1' else 'Major'},
-                                  customfield_10216='Mantis-' + str(bug.id))
+                                  priority={'name': 'P3'},
+                                  customfield_14100='Mantis-' + str(bug.id))
         return issue
 
-    issues = jira.search_issues('project = %s AND "BugZilla ID" ~ "Mantis-%s"' % (project_key, mantis_id))
+    issues = jira.search_issues('project = %s AND "Mantis ID" ~ "Mantis-%s"' % (project_key, mantis_id))
     if issues:
         issue = issues[0]
         issue = jira.issue(issue.key)
@@ -462,11 +462,11 @@ def main():
                 sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, args.k, args.y)
         elif args.r:  # find jira
             issues = jira.search_issues(
-                'project = %s AND "BugZilla ID" is not empty '
-                'AND status not in ("Resolved", "Closed", "Remind", "Verified")' % (
+                'project = %s AND "Mantis ID" is not empty '
+                'AND status not in ("Resolved", "Closed", "Remind", "Verified", "Abort")' % (
                     args.k))
             for issue in issues:
-                bz_id = issue.fields.customfield_10216
+                bz_id = issue.fields.customfield_14100
                 if not bz_id.startswith('QTSHBS00'):
                     continue
                 bug = new_jira.issue(bz_id)
