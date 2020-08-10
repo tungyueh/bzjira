@@ -470,7 +470,7 @@ def main():
         elif args.r:  # find jira
             issues = jira.search_issues(
                 'project = %s AND "Mantis ID" is not empty '
-                'AND status not in ("Resolved", "Closed", "Remind", "Verified", "Abort")' % (
+                'AND status not in ("Resolved", "Closed", "Verified", "Abort")' % (
                     args.k))
             for issue in issues:
                 bz_id = issue.fields.customfield_14100
