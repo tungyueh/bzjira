@@ -354,7 +354,7 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
 
     if bug.status in ['resolved', 'closed']:
         if issue.fields.status.name == 'Open':
-            jira.transition_issue(issue, 'Assign to')
+            jira.transition_issue(issue, 'Assign to ')
         elif issue.fields.status.name == 'Assigned':
             jira.transition_issue(issue, 'Resolved',
                 customfield_12044='NA', # build path
