@@ -444,8 +444,8 @@ def main():
             for bz_id in mantis.filter_get_issues(args.m, username, passwd, args.p, args.f):
                 sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.o, args.y)
         elif args.r:  # find jira
-            issues = jira.search_issues('project = %s AND "BugZilla ID" is not empty '
-            'AND status not in ("Resolved", "Closed", "Remind", "Verified")' % (args.k))
+            issues = jira.search_issues('project = %s AND "Mantis ID" is not empty '
+            'AND status not in ("Resolved", "Closed", "Verified", "Abort")' % (args.k))
             for issue in issues:
                 bz_id = issue.fields.customfield_10216
                 if not bz_id.startswith('Mantis-'):
@@ -468,8 +468,7 @@ def main():
                 bug = new_jira.issue(bug_entry.key)
                 sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, args.k, args.y)
         elif args.r:  # find jira
-            issues = jira.search_issues(
-                'project = %s AND "Mantis ID" is not empty '
+            issues = jira.search_issues('project = %s AND "Mantis ID" is not empty '
                 'AND status not in ("Resolved", "Closed", "Verified", "Abort")' % (
                     args.k))
             for issue in issues:
