@@ -30,6 +30,7 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
             priority={'name': bug.fields.priority.name},
             customfield_14100=bz_id
         )
+        issue.update(assignee={'name': None})
         return issue
 
     issues = jira.search_issues('project = %s AND "Mantis ID" ~ "%s"' % (project_key, bz_id))
@@ -254,6 +255,7 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
                                   issuetype={'name': 'Bug'},
                                   priority={'name': 'P3'},
                                   customfield_14100='Mantis-' + str(bug.id))
+        issue.update(assignee={'name': None})
         return issue
 
     issues = jira.search_issues('project = %s AND "Mantis ID" ~ "Mantis-%s"' % (project_key, mantis_id))
@@ -447,7 +449,7 @@ def main():
             issues = jira.search_issues('project = %s AND "Mantis ID" is not empty '
             'AND status not in ("Resolved", "Closed", "Verified", "Abort")' % (args.k))
             for issue in issues:
-                bz_id = issue.fields.customfield_10216
+                bz_id = issue.fields.customfield_14100
                 if not bz_id.startswith('Mantis-'):
                     continue
                 bz_id = bz_id.lstrip('Mantis-')
@@ -473,7 +475,7 @@ def main():
                     args.k))
             for issue in issues:
                 bz_id = issue.fields.customfield_14100
-                if not bz_id.startswith('QTSHBS00'):
+                if len(bz_id.split('-')[0]) != 8: # QTSHBS00, QTSHBM00
                     continue
                 bug = new_jira.issue(bz_id)
                 sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, args.k, args.y)
