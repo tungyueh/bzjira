@@ -27,12 +27,13 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
             summary='[{}]{}'.format(bz_id.replace('-','#'), bug.fields.summary),
             description=bug.fields.description,
             issuetype={'name': 'Bug'},
-            priority={'name': 'Critical' if bug.fields.priority.name == 'P1' else 'Major'},
-            customfield_10216=bz_id
+            priority={'name': bug.fields.priority.name},
+            customfield_14100=bz_id
         )
+        issue.update(assignee={'name': None})
         return issue
 
-    issues = jira.search_issues('project = %s AND "BugZilla ID" ~ "%s"' % (project_key, bz_id))
+    issues = jira.search_issues('project = %s AND "Mantis ID" ~ "%s"' % (project_key, bz_id))
     if issues:
         issue = issues[0]
         issue = jira.issue(issue.key)
@@ -109,17 +110,17 @@ def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes
         print('Comment %s created' % comment_id)
 
     bug_status = bug.fields.status.name.upper()
-    # build_number = 0
-    # try:
-    #     build_number = int(bug.fields.customfield_11807)
-    # except (ValueError, TypeError) as e:
-    #     build_number = 0
-    if (bug_status in ['VERIFIED', 'CLOSE', 'DONE', 'CLOSED'] and
-        str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
-        jira.transition_issue(issue, 'Resolve Issue',
-            resolution={'name': 'Fixed'},
-            # fields={'customfield_10204': build_number},
-            comment='Change to Resolved due to New JIRA #%s is %s' % (bz_id, bug_status))
+    if bug_status in ['VERIFIED', 'CLOSE', 'DONE', 'CLOSED']:
+        if issue.fields.status.name == 'Open':
+            jira.transition_issue(issue, 'Assign to')
+        elif issue.fields.status.name == 'Assigned':
+            jira.transition_issue(issue, 'Resolved',
+                customfield_12044='NA', # build path
+                fixVersions=[{'name':'NA'}],
+                customfield_13443={'value':'---'}, # resolved reason
+                customfield_12014='NA', # root cause
+                customfield_11707='NA', # solution 
+                comment='Change to Resolved due to JIRA #%s is %s' % (bz_id, bug.status))
 
 
 def sync_bz_to_jira(bz, bz_id, jira, project_key, yes_all):
@@ -252,11 +253,12 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
                                   summary='[Mantis#%s] ' % bug.id + bug.summary,
                                   description=bug.description,
                                   issuetype={'name': 'Bug'},
-                                  priority={'name': 'Critical' if bug.priority == 'P1' else 'Major'},
-                                  customfield_10216='Mantis-' + str(bug.id))
+                                  priority={'name': 'P3'},
+                                  customfield_14100='Mantis-' + str(bug.id))
+        issue.update(assignee={'name': None})
         return issue
 
-    issues = jira.search_issues('project = %s AND "BugZilla ID" ~ "Mantis-%s"' % (project_key, mantis_id))
+    issues = jira.search_issues('project = %s AND "Mantis ID" ~ "Mantis-%s"' % (project_key, mantis_id))
     if issues:
         issue = issues[0]
         issue = jira.issue(issue.key)
@@ -352,10 +354,19 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
         if board_id:
             move_to_current_sprint(board_id, issue)
 
-    if (bug.status in ['resolved', 'closed'] and
-        str(issue.fields.status) not in ['Resolved', 'Verified', 'Closed']):
-        jira.transition_issue(issue, 'Resolve Issue',
-        comment='Change to Resolved due to Mantis #%s is %s' % (mantis_id, bug.status))
+    if bug.status in ['resolved', 'closed']:
+        if issue.fields.status.name == 'Open':
+            jira.transition_issue(issue, 'Assign to ')
+        elif issue.fields.status.name in ['Assigned', 'Need more info']:
+            if issue.fields.status.name == 'Need more info':
+                jira.transition_issue(issue, 'Feedback')
+            jira.transition_issue(issue, 'Resolved',
+                customfield_12044='NA', # build path
+                fixVersions=[{'name':'NA'}],
+                customfield_13443={'value':'---'}, # resolved reason
+                customfield_12014='NA', # root cause
+                customfield_11707='NA', # solution 
+                comment='Change to Resolved due to Mantis #%s is %s' % (mantis_id, bug.status))
 
 
 def monkey_patch():
@@ -437,10 +448,10 @@ def main():
             for bz_id in mantis.filter_get_issues(args.m, username, passwd, args.p, args.f):
                 sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.o, args.y)
         elif args.r:  # find jira
-            issues = jira.search_issues('project = %s AND "BugZilla ID" is not empty '
-            'AND status not in ("Resolved", "Closed", "Remind", "Verified")' % (args.k))
+            issues = jira.search_issues('project = %s AND "Mantis ID" is not empty '
+            'AND status not in ("Resolved", "Closed", "Verified", "Abort")' % (args.k))
             for issue in issues:
-                bz_id = issue.fields.customfield_10216
+                bz_id = issue.fields.customfield_14100
                 if not bz_id.startswith('Mantis-'):
                     continue
                 bz_id = bz_id.lstrip('Mantis-')
@@ -461,13 +472,12 @@ def main():
                 bug = new_jira.issue(bug_entry.key)
                 sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, args.k, args.y)
         elif args.r:  # find jira
-            issues = jira.search_issues(
-                'project = %s AND "BugZilla ID" is not empty '
-                'AND status not in ("Resolved", "Closed", "Remind", "Verified")' % (
+            issues = jira.search_issues('project = %s AND "Mantis ID" is not empty '
+                'AND status not in ("Resolved", "Closed", "Verified", "Abort")' % (
                     args.k))
             for issue in issues:
-                bz_id = issue.fields.customfield_10216
-                if not bz_id.startswith('QTSHBS00'):
+                bz_id = issue.fields.customfield_14100
+                if len(bz_id.split('-')[0]) != 8: # QTSHBS00, QTSHBM00
                     continue
                 bug = new_jira.issue(bz_id)
                 sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, args.k, args.y)
