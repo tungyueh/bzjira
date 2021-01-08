@@ -14,9 +14,6 @@ MAX_OLD_JIRA_ATTACHMENT_BYTES = 10 * 1024 * 1024
 
 def sync_new_jira_to_jira(new_jira_server, new_jira, bug, jira, project_key, yes_all):
     bz_id = bug.key
-    if bug.fields.issuetype.name != 'Bug':
-        print(f'New JIRA key {bz_id} skipped since type is not bug')
-        return
     print('New JIRA key %s found: %s' % (bz_id, bug.fields.summary))
     comments = new_jira.comments(bug)
     attachments = bug.fields.attachment
