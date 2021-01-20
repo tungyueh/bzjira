@@ -361,18 +361,25 @@ def sync_mantis_to_jira(mantis_server, username, passwd, mantis_id, jira, projec
             move_to_current_sprint(board_id, issue)
 
     if bug.status in ['resolved', 'closed']:
-        if issue.fields.status.name == 'Open':
-            jira.transition_issue(issue, 'Assign to ')
-        elif issue.fields.status.name in ['Assigned', 'Need more info']:
-            if issue.fields.status.name == 'Need more info':
-                jira.transition_issue(issue, 'Feedback')
-            jira.transition_issue(issue, 'Resolved',
-                customfield_12044='NA', # build path
-                fixVersions=[{'name':'NA'}],
-                customfield_13443={'value':'---'}, # resolved reason
-                customfield_12014='NA', # root cause
-                customfield_11707='NA', # solution 
-                comment='Change to Resolved due to Mantis #%s is %s' % (mantis_id, bug.status))
+        if issue.fields.issuetype.name == 'Bug':
+            if issue.fields.status.name == 'Open':
+                jira.transition_issue(issue, 'Assign to ')
+            elif issue.fields.status.name in ['Assigned', 'Need more info']:
+                if issue.fields.status.name == 'Need more info':
+                    jira.transition_issue(issue, 'Feedback')
+                jira.transition_issue(issue, 'Resolved',
+                    customfield_12044='NA', # build path
+                    fixVersions=[{'name':'NA'}],
+                    customfield_13443={'value':'---'}, # resolved reason
+                    customfield_12014='NA', # root cause
+                    customfield_11707='NA', # solution
+                    comment='Change to Resolved due to Mantis #%s is %s' % (mantis_id, bug.status))
+        elif issue.fields.issuetype.name == 'Task':
+            if issue.fields.status.name in ['To Do', 'reopen']:
+                jira.transition_issue(issue, 'handling')
+            comment = 'Change to Close due to Mantis #%s is %s' % (mantis_id, bug.status)
+            jira.add_comment(issue, comment)
+            jira.transition_issue(issue, 'done')
 
 
 def monkey_patch():
@@ -455,7 +462,7 @@ def main():
                 sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.o, args.y)
         elif args.r:  # find jira
             issues_found_by_mantis_id = jira.search_issues('project = %s AND "Mantis ID" is not empty AND status not in ("Resolved", "Closed", "Verified", "Abort")' % (args.k))
-            issues_found_by_related_task = jira.search_issues('project = %s AND issueFunction in linkedIssuesOfRemote("title", "Mantis-*") AND status not in ("Resolved", "Closed", "Verified", "Abort")' % (args.k))
+            issues_found_by_related_task = jira.search_issues('project = %s AND issueFunction in linkedIssuesOfRemote("title", "Mantis-*") AND status not in ("Close", "Abort")' % (args.k))
             issues = issues_found_by_mantis_id + issues_found_by_related_task
             for issue in issues:
                 bz_id = issue.fields.customfield_14100
