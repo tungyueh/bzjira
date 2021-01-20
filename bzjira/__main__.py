@@ -454,10 +454,16 @@ def main():
             for bz_id in mantis.filter_get_issues(args.m, username, passwd, args.p, args.f):
                 sync_mantis_to_jira(args.m, username, passwd, bz_id, jira, args.k, args.o, args.y)
         elif args.r:  # find jira
-            issues = jira.search_issues('project = %s AND "Mantis ID" is not empty '
-            'AND status not in ("Resolved", "Closed", "Verified", "Abort")' % (args.k))
+            issues_found_by_mantis_id = jira.search_issues('project = %s AND "Mantis ID" is not empty AND status not in ("Resolved", "Closed", "Verified", "Abort")' % (args.k))
+            issues_found_by_related_task = jira.search_issues('project = %s AND issueFunction in linkedIssuesOfRemote("title", "Mantis-*") AND status not in ("Resolved", "Closed", "Verified", "Abort")' % (args.k))
+            issues = issues_found_by_mantis_id + issues_found_by_related_task
             for issue in issues:
                 bz_id = issue.fields.customfield_14100
+                if bz_id is None:
+                    for remote_link in jira.remote_links(issue):
+                        remote_link_title = remote_link.object.title
+                        if remote_link_title.startswith('Mantis-'):
+                            bz_id = remote_link_title
                 if not bz_id.startswith('Mantis-'):
                     continue
                 bz_id = bz_id.lstrip('Mantis-')
